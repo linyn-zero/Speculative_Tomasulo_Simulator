@@ -104,24 +104,20 @@ class ReorderBuffer:
                     return None, checkPointer+1   #返回冲突的ROB条目序号
                 elif state=='write':    #该条目的状态为write，可以旁路
                     return self.queue[checkPointer].value, checkPointer+1 #旁路返回ROBEntry的value值（value值的表示工作交给写入时进行）
-                else:           #该条目状态为commit（虽然没有这种情况。状态为commit的指令不会在栈中）
-                    print('真奇怪，出现了状态为 commit 的ROBEntry')
+                # else:           #该条目状态为commit（这种情况只在旧指令刚离开Write状态时发生。状态为commit的指令不会在栈中）
+                    # print('真奇怪，出现了状态为 commit 的ROBEntry')
+
             checkPointer = (checkPointer-1+self.maxlen) % self.maxlen
             size -= 1
         return f'Regs[{keyReg}]', keyReg
 
     def display(self): # 作为ROB的display
-        print("\033[1;33mReorder Buffer\033[0m")
+        print("\033[1;33mReorder Buffer\033[0m"
+              +(("(\033[3;34mFull\033[0m)" if self.isfull() else "(\033[3;34mEmpty\033[0m)") if self.tear == self.head else '')
+              + f": \033[3;34mHead={self.head+1} Tear={self.tear+1}\033[0m")
         print("\033[32mEntry  Busy  Instruction\t State   Dest  Value\033[0m")
         for number, entry in enumerate(self.queue):
             entry.display()
-        print(f"\033[3;34mHead={self.head+1} Tear={self.tear+1}\033[0m")
-        if self.tear == self.head:
-            if self.isfull():
-                print("\033[3;34mReorder Buffer is Full.\033[0m")
-            else:
-                print("\033[3;34mReorder Buffer is Empty.\033[0m")
-        print()
 
 
 ROB_MAX_SIZE = 6

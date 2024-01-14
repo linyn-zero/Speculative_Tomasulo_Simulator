@@ -10,7 +10,7 @@ def fml(s, width):
     return ' ' * width if s is None else\
         '{0:<{width}}'.format(str(s), width=width)
 
-FILE_PATH = './input1.txt'
+FILE_PATH = './script.txt'
 STD_OP = ['ADDD', 'SUBD', 'MULTD', 'DIVD', 'LD', 'SD']
 EXEC_SPEND_CYCLE = {
     'ADDD': 2,
@@ -44,6 +44,12 @@ class RunningCycleTable:
                   , fmc(cycleInfo['Exec'], 4) + ' '
                   , fmc(cycleInfo['Write'], 5) + ' '
                   , fmc(cycleInfo['Commit'], 6))
+        print('\033[3;34m注：这张 Cycle Table 展示的是指令进入某一状态的时间。\n'
+                        '本程序支持：\n'
+                        '   1. Write 阶段的结果旁路到 Exec 阶段\n'
+                        '   2. Commit 阶段的写寄存器旁路到 Issue 阶段，使能 RSEntry.ready，以解决 RAW 冲突\n'
+                        '   3. 单周期只能发射至多一条指令（多发射也不难实现）\n'
+                        '   4. 单周期允许提交至少一条指令（这才叫超标量处理器嘛）\033[0m')
 
     def setExec(self, instruction, cycle):
         self.instructionCycle[instruction]['Exec'] = cycle
@@ -102,7 +108,7 @@ class SpeculativeTomasulo:
         if RSEntry.timer >= 0:
             RSEntry.timer -= 1
         # 否则清除RS、修改ROB状态、执行旁路
-        else:
+        if RSEntry.timer < 0:
             op = RSEntry.operation
             RSEntry.clear()
             ROBEntryNumber = instructionInfo['ROBEntry']
@@ -159,7 +165,10 @@ class SpeculativeTomasulo:
                     and REGISTER_RESULT_STATUS.isempty()):
                 break
         #打印最后的 RunningCycle 表
+        self.display(self.cycle)
         self.RunningCycle.display()
+        print("===================================================================================================")
+
 
     def display(self, cycle):
         print("===================================================================================================")

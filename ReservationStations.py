@@ -45,10 +45,10 @@ class ReservationStationsEntry:
                   ,fml(self.name, 5)+'  '
                   ,'Yes '
                   ,fml(self.operation, 5)+ ' '
-                  ,(fml(self.value1, 18) if self.value1 is not None else '                  ')+ ' '
-                  ,(fml(self.value2, 18) if self.value2 is not None else '                  ')+ ' '
-                  ,('  ' if self.source1 is None else f'#{self.source1}' if isinstance(self.source1, int) else self.source1)+ ' '
-                  ,('  ' if self.source1 is None else f'#{self.source2}' if isinstance(self.source2, int) else self.source2)+ ' '
+                  ,(fml(self.value1, 10) if self.value1 is not None else '          ')+ ' '
+                  ,(fml(self.value2, 10) if self.value2 is not None else '          ')+ ' '
+                  ,('  ' if self.source1 is None or self.value1 is not None else f'#{self.source1}' if isinstance(self.source1, int) else self.source1)+ ' '
+                  ,('  ' if self.source2 is None or self.value2 is not None else f'#{self.source2}' if isinstance(self.source2, int) else self.source2)+ ' '
                   ,f' #{self.destination} '+ ' '
                   ,self.address)
         else:
@@ -207,7 +207,7 @@ class ReservationStations:
 
     def display(self):
         print("\033[1;33mReservation Stations\033[0m")
-        print("\033[32mTime  Name   Busy  Op     Vj                  Vk                  Qj  Qk  Dest  Addr\033[0m")
+        print("\033[32mTime  Name   Busy  Op     Vj          Vk          Qj  Qk  Dest  Addr\033[0m")
         self.AdddStation.display()
         self.MultStation.display()
         self.LoadStation.display()
