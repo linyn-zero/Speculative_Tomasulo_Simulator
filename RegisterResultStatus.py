@@ -47,7 +47,6 @@ class RegisterResultStatus:
                                                     if self.busy_status[i]
                                                     else "No\t"
                                                     for i in range(MAX_SIZE)))
-        print()
 
 
 MAX_SIZE = 6

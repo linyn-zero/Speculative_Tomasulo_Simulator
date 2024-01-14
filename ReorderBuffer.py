@@ -26,11 +26,11 @@ class ReorderBufferEntry:
 
     def display(self):
         print(fmc(self.number,5)+'  '
-                , ('Yes' if self.busy else 'No') + '\t'
-                , fml(self.instruction,15)
-                , fml(self.state, 8)
-                , fml(self.destination, 6)
-                , fmc(self.value,5))
+                , ('Yes' if self.busy else 'No')
+                , fml(self.instruction,15) + ' '
+                , fml(self.state, 7)
+                , fmc(self.destination, 4) +' '
+                , self.value)
 
 
 
@@ -111,7 +111,7 @@ class ReorderBuffer:
         return f'Regs[{keyReg}]', keyReg
 
     def display(self): # 作为ROB的display
-        print("\033[1;33mReservation Stations\033[0m")
+        print("\033[1;33mReorder Buffer\033[0m")
         print("\033[32mEntry  Busy  Instruction\t State   Dest  Value\033[0m")
         for number, entry in enumerate(self.queue):
             entry.display()

@@ -40,9 +40,11 @@ class SpeculativeTomasulo:
 
     def issue(self):
         # FP OP Queue 发送 ins 给 ROB 和 RS 。需要ROB和RS都有空位 （每周期只发一条）。
-        # 先从 FP queue 获取第一条指令试试水
+        # 从 FP queue 获取一条指令试试水
+        if FQ_OP_QUEUE.isempty():
+            return
         instruction = FQ_OP_QUEUE.queue.queue[0]
-        op = instruction.slide()[0]
+        op = instruction.split()[0]
         if not REORDER_BUFFER.isfull() and not RESERVATION_STATIONS.isfull(op):
             FQ_OP_QUEUE.pop()  #从 FP queue 中取出
             ROBEntryNumber = REORDER_BUFFER.issue(instruction)  #发射到ROB。ROBEntry状态初始化为issue。（隐式修改RRSmap）
@@ -60,9 +62,9 @@ class SpeculativeTomasulo:
         outcome = RSEntry.getROBValue()
         ROBEntry.value = outcome
 
-    def exec(self, instruction, instructionInfo): #检查ready，为真则将指令状态置为Exec，设置计时器
-        RSEntry = RESERVATION_STATIONS.getRSEntry(instructionInfo[instruction]['Name'])
-        ROBEntry = REORDER_BUFFER.getROBEntry(instructionInfo[instruction]['ROBEntryNumber'])
+    def exec(self, instructionInfo): #检查ready，为真则将指令状态置为Exec，设置计时器
+        RSEntry = RESERVATION_STATIONS.getRSEntry(instructionInfo['RSEntry'])
+        ROBEntry = REORDER_BUFFER.getROBEntry(instructionInfo['ROBEntry'])
         op = RSEntry.operation
         if RSEntry.ready:
             ROBEntry.state = 'Exec'
@@ -72,7 +74,7 @@ class SpeculativeTomasulo:
     def write(self,instruction, instructionInfo):
         #若执行计数器未执行完，更新计数器，保持state=Exec
         RSEntry = RESERVATION_STATIONS.getRSEntry(instructionInfo[instruction]['Name'])
-        if RSEntry.timer is not 0:
+        if RSEntry.timer != 0:
             RSEntry.timer -= 1
         # 否则清除RS、修改ROB状态、执行旁路
         else:
@@ -107,11 +109,13 @@ class SpeculativeTomasulo:
     def run(self, file_path):
         self.init(file_path)
         cycle = 0
-        while True:
+        limit = 10
+        while limit > 0 :
             self.display(cycle)
             cycle += 1
+            limit -= 1
             #对每条指令状态进行判断顺序:提交->写回->执行。RAW只会影响更新的指令，因此从旧往新更新即可。
-            for i, (instruction, instructionInfo) in enumerate(self.RunningCycle.instructionInfo):
+            for i, (instruction, instructionInfo) in enumerate(self.RunningCycle.instructionInfo.items()):
                 state = self.RunningCycle.instructionInfo[instruction]['State']
                 if state == 'Commit':
                     continue  #提交的指令已经完成
@@ -120,7 +124,7 @@ class SpeculativeTomasulo:
                 elif state == 'Exec':
                     self.write(instruction, instructionInfo) #可能是对指令Timer--,也可能是将指令write，旁路，更新依赖项ready
                 elif state == 'Issue':
-                    self.exec(instruction, instructionInfo) #检查ready，为真则将指令状态置为Exec，设置计时器
+                    self.exec(instructionInfo) #检查ready，为真则将指令状态置为Exec，设置计时器
             self.issue() #这是每个周期都要做的事情
 
             # self.exec()  #这是部分指令要做的事情.考虑exec与write/commit的顺序关系.计时器的加减规则
@@ -137,12 +141,12 @@ class SpeculativeTomasulo:
         #打印最后的 RunningCycle 表
 
     def display(self, cycle):
-        print("========================================")
+        print("===================================================================================================")
         print(f"\033[1;33mCycles {cycle}\033[0m")
         REORDER_BUFFER.display()
         RESERVATION_STATIONS.display()
         REGISTER_RESULT_STATUS.display()
-        print("========================================")
+        print("===================================================================================================")
 
 if __name__ == "__main__":
     speculative_tomasulo = SpeculativeTomasulo()
