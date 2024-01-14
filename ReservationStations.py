@@ -196,7 +196,6 @@ class ReservationStations:
         self.MultStation.forwarding(ROBEntryNumber, value)
         self.LoadStation.forwarding(ROBEntryNumber, value)
 
-
     def isfull(self, op):  # 指定op站为full
         return self.getStation(op).isfull()
 
@@ -219,5 +218,4 @@ class ReservationStations:
 ADDD_MAX_SIZE = 3
 MULT_MAX_SIZE = 2
 LD_MAX_SIZE = 2
-
 RESERVATION_STATIONS = ReservationStations()

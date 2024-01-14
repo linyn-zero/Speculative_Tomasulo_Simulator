@@ -25,12 +25,13 @@ class ReorderBufferEntry:
         self.value = None  #会在main.issue更新
 
     def display(self):
+        op = self.instruction.split()[0] if self.instruction is not None else None
         print(fmc(self.number,5)+' '
                 , (' Yes' if self.busy else ' No ') +' '
                 , fml(self.instruction,14) + ' '
                 , fml(self.state, 7)
                 , fmc(self.destination, 4) +' '
-                , (self.value if self.state=='Commit'or self.state=='Write' else ''))
+                , ('' if op=='SD' else self.value if self.state=='Commit'or self.state=='Write' else ''))
 
 
 
@@ -49,8 +50,6 @@ class ReorderBuffer:
         if self.isfull():
             print(f"ROBQueue is full, and function \'issue {instruction}\' is failed: ")
             return
-        if instruction == 'MULTD F6 F0 F2':
-            print('why')
         number = self.tear + 1 #获取ROB表项序号（逻辑序号，比真实序号大一）
         self.queue[self.tear].issue(instruction) # 更新ROB项
         self.size += 1
@@ -122,31 +121,4 @@ class ReorderBuffer:
 
 
 ROB_MAX_SIZE = 6
-
 REORDER_BUFFER = ReorderBuffer()
-
-
-
-    # 作为queue的display
-    # def display(self):
-    #     head = self.head
-    #     tear = self.tear
-    #     while not self.isempty():
-    #         self.queue[head].display()
-    #         head = (head+1) % self.maxlen
-    #         if head == tear or self.isempty():
-    #             return
-    #         # item.display()
-
-
-
-#检查输出
-# from FPOPqueue import FPOPqueue
-# fq = FPOPqueue()
-# fq.input('./input1.txt')
-# fq.display()
-# rob = ReorderBuffer()
-# while True:
-#     ins = fq.pop()
-#     rob.issue(ins)
-#     rob.display()

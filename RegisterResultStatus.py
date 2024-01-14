@@ -54,7 +54,6 @@ class RegisterResultStatus:
 
 
 MAX_SIZE = 6
-
 REGISTER_RESULT_STATUS = RegisterResultStatus()
 
 #检查RRS映射逻辑

@@ -10,7 +10,8 @@ def fml(s, width):
     return ' ' * width if s is None else\
         '{0:<{width}}'.format(str(s), width=width)
 
-FILE_PATH = './input2.txt'
+INPUT_FILE_PATH = './input2.txt'
+OUTPUT_FILE_PATH = './output2.txt'
 STD_OP = ['ADDD', 'SUBD', 'MULTD', 'DIVD', 'LD', 'SD']
 EXEC_SPEND_CYCLE = {
     'ADDD': 2,
@@ -170,21 +171,14 @@ class SpeculativeTomasulo:
     def run(self, file_path):
         self.init(file_path)
         self.cycle = 0
-        limit = 100
-        while limit > 0:
+        while True:
             self.display(self.cycle)
             if self.cycle==26:
                 print()
             self.cycle += 1
-            limit -= 1
             #对每条指令状态进行判断顺序:提交->写回->执行。RAW只会影响更新的指令，因此从旧往新更新即可。
             for i, (instructionNumber, instructionInfo) in enumerate(self.RunningCycle.instructionInfo.items()):
-                ROBEntryNumber = instructionInfo['ROBEntry']
                 state = instructionInfo['State']
-
-                busy = RESERVATION_STATIONS.LoadStation.station[0].busy
-                ins = RESERVATION_STATIONS.LoadStation.station[0].operation
-
                 if state == 'Commit':
                     continue  #提交的指令已经完成
                 elif state == 'Write':
@@ -197,9 +191,6 @@ class SpeculativeTomasulo:
                     self.exec(instructionNumber, instructionInfo) #检查ready，为真则将指令状态置为Exec，设置计时器
             self.issue() #这是每个周期都要做的事情
             self.updateRRS()
-            busy = RESERVATION_STATIONS.LoadStation.station[0].busy
-            ins = RESERVATION_STATIONS.LoadStation.station[0].operation
-
             #终止判断
             if (FQ_OP_QUEUE.isempty()
                     and REORDER_BUFFER.isempty()
@@ -233,4 +224,4 @@ class SpeculativeTomasulo:
 
 if __name__ == "__main__":
     speculative_tomasulo = SpeculativeTomasulo()
-    speculative_tomasulo.run(FILE_PATH)
+    speculative_tomasulo.run(INPUT_FILE_PATH)
