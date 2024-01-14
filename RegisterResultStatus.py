@@ -21,6 +21,10 @@ class RegisterResultStatus:
         reg_number = self.reg_map[archiReg]
         self.busy_status[reg_number] = False
 
+    def clear(self):
+        self.reorder_number = [None, None, None, None, None, None]
+        self.busy_status = [False,False,False,False,False,False,]
+
     def getROBNumber(self, destination):
         item_number = self.reg_map[destination]
         if self.busy_status[item_number]:

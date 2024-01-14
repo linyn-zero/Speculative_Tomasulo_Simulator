@@ -86,8 +86,6 @@ class SpeculativeTomasulo:
             ROBEntryNumber = REORDER_BUFFER.issue(instruction)  #发射到ROB。ROBEntry状态初始化为issue。（隐式修改RRSmap）
             RSEntryName = RESERVATION_STATIONS.issue(instruction, ROBEntryNumber, REORDER_BUFFER) #发射到RS。RS会有状态更新。
             destination = instruction.split()[1]
-            if op != 'SD':  #只有 SD 指令不写寄存器
-                REGISTER_RESULT_STATUS.map(destination, ROBEntryNumber)  # 显式修改RRS映射状态
             self.issueSetValue(ROBEntryNumber,RSEntryName)  #ROB利用RS表项，提前提前提前计算出value的表达式
             self.RunningCycle.append(instructionNumber, instruction, self.cycle, ROBEntryNumber, RSEntryName) #加入到列表中
         else:
@@ -163,7 +161,6 @@ class SpeculativeTomasulo:
             ROBEntry = REORDER_BUFFER.getROBEntry(instructionInfo['ROBEntry'])
             ROBEntry.state = 'Commit'
             self.RunningCycle.setCommit(instructionNumber, self.cycle)
-            REGISTER_RESULT_STATUS.unmap(destination)  #将执行结果写入寄存器(清除RRS)
 
     def init(self, file_path):
         FQ_OP_QUEUE.input(file_path)  #读入指令
@@ -199,7 +196,7 @@ class SpeculativeTomasulo:
                         print()
                     self.exec(instructionNumber, instructionInfo) #检查ready，为真则将指令状态置为Exec，设置计时器
             self.issue() #这是每个周期都要做的事情
-
+            self.updateRRS()
             busy = RESERVATION_STATIONS.LoadStation.station[0].busy
             ins = RESERVATION_STATIONS.LoadStation.station[0].operation
 
@@ -213,6 +210,17 @@ class SpeculativeTomasulo:
         self.display(self.cycle)
         self.RunningCycle.display()
         print("===================================================================================================")
+
+    def updateRRS(self):
+        REGISTER_RESULT_STATUS.clear()
+        for i, (instructionNumber, instructionInfo) in enumerate(self.RunningCycle.instructionInfo.items()):
+            instruction = instructionInfo['Instruction']
+            op = instruction.split()[0]
+            destination = instruction.split()[1]
+            state = instructionInfo['State']
+            if op != 'SD' and state != 'Commit':  #只有 SD 指令不写寄存器
+                ROBEntryNumber = instructionInfo['ROBEntry']
+                REGISTER_RESULT_STATUS.map(destination, ROBEntryNumber)
 
 
     def display(self, cycle):
