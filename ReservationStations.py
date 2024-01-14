@@ -6,7 +6,7 @@ def fml(s, width):
         '{0:<{width}}'.format(str(s), width=width)
 
 class ReservationStationsEntry:
-    def __init__(self, name, time=0, busy=False, operation=None,
+    def __init__(self, name, time=-1, busy=False, operation=None,
                  value1=None, value2=None, source1=None, source2=None,
                  destination=None, value=None, address=None, ready=False):
         self.name = name    # 初始化后不修改
@@ -28,7 +28,7 @@ class ReservationStationsEntry:
         self.ready = self.value1 is not None and self.value2 is not None or self.address is not None
 
     def clear(self):
-        self.timer = 0
+        self.timer = -1
         self.busy = False
         self.operation = None
         self.value1 = None
@@ -41,14 +41,14 @@ class ReservationStationsEntry:
 
     def display(self):
         if self.busy:
-            print((fmc(self.timer, 4) if self.timer != 0 else '    ')+' '
+            print((fmc(self.timer, 4) if self.timer >= 0 else '    ')+' '
                   ,fml(self.name, 5)+'  '
                   ,'Yes '
                   ,fml(self.operation, 5)+ ' '
                   ,(fml(self.value1, 18) if self.value1 is not None else '                  ')+ ' '
                   ,(fml(self.value2, 18) if self.value2 is not None else '                  ')+ ' '
-                  ,('  ' if self.source1 is None else f'#{self.source1}' if self.source1.isdigit() else self.source1)+ ' '
-                  ,('  ' if self.source1 is None else f'#{self.source2}' if self.source2.isdigit() else self.source2)+ ' '
+                  ,('  ' if self.source1 is None else f'#{self.source1}' if isinstance(self.source1, int) else self.source1)+ ' '
+                  ,('  ' if self.source1 is None else f'#{self.source2}' if isinstance(self.source2, int) else self.source2)+ ' '
                   ,f' #{self.destination} '+ ' '
                   ,self.address)
         else:
@@ -92,8 +92,8 @@ class ReservationStationsEntry:
     def getROBValue(self):
         op = self.operation
         if op == 'ADDD' or op == 'SUBD'or op == 'MULTD' or op == 'DIVD':
-            v1 = '#'+str(self.source1) if self.source1.isdigit() else self.source1 #ROBEntryNumber或者浮点寄存器名
-            v2 = '#'+str(self.source2) if self.source2.isdigit() else self.source2
+            v1 = '#'+str(self.source1) if isinstance(self.source1, int) else self.source1 #ROBEntryNumber或者浮点寄存器名
+            v2 = '#'+str(self.source2) if isinstance(self.source2, int) else self.source2
             if op == 'ADDD':
                 return v1+'+'+v2
             if op == 'SUBD':
@@ -103,7 +103,8 @@ class ReservationStationsEntry:
             if op == 'DIVD':
                 return v1+'/'+v2
         else:
-            return
+            if op == 'LD':
+                return f'Mem[{self.name}]'
 
 class Station:
     def __init__(self, maxlen, name):

@@ -3,6 +3,13 @@ from RegisterResultStatus import REGISTER_RESULT_STATUS
 from ReorderBuffer import REORDER_BUFFER
 from ReservationStations import RESERVATION_STATIONS
 
+def fmc(s, width):
+    return ' ' * width if s is None else\
+        '{0:^{width}}'.format(str(s), width=width)
+def fml(s, width):
+    return ' ' * width if s is None else\
+        '{0:<{width}}'.format(str(s), width=width)
+
 FILE_PATH = './input1.txt'
 STD_OP = ['ADDD', 'SUBD', 'MULTD', 'DIVD', 'LD', 'SD']
 EXEC_SPEND_CYCLE = {
@@ -21,12 +28,29 @@ class RunningCycleTable:
 
 
     def append(self, instruction, cycle, ROBEntryNumber, RSEntryName):
-        self.instructionInfo[instruction] = {'State': 'Issue', 'ROBEntry': ROBEntryNumber, 'RSEntry': RSEntryName}
+        self.instructionInfo[instruction] = {'ROBEntry': ROBEntryNumber, 'RSEntry': RSEntryName}
         self.instructionCycle[instruction] = {'Issue': cycle, 'Exec': None, 'Write': None, 'Commit': None}
 
     def clear(self):
         self.instructionInfo = {}
         self.instructionCycle = {}
+
+    def display(self):
+        print("\033[1;33mInstructions Cycle Table\033[0m")
+        print("\033[32m\t\t\t\tIssue  Exec  Write  Commit\033[0m")
+        for i, (instruction, cycleInfo) in enumerate(self.instructionCycle.items()):
+            print(fml(instruction, 14) + ' '
+                  , fmc(cycleInfo['Issue'], 5) + ' '
+                  , fmc(cycleInfo['Exec'], 4) + ' '
+                  , fmc(cycleInfo['Write'], 5) + ' '
+                  , fmc(cycleInfo['Commit'], 6))
+
+    def setExec(self, instruction, cycle):
+        self.instructionCycle[instruction]['Exec'] = cycle
+    def setWrite(self, instruction, cycle):
+        self.instructionCycle[instruction]['Write'] = cycle
+    def setCommit(self, instruction, cycle):
+        self.instructionCycle[instruction]['Commit'] = cycle
 
 class SpeculativeTomasulo:
     def __init__(self):
@@ -56,36 +80,38 @@ class SpeculativeTomasulo:
         else:
             print("ROB or RS is full, function \'Issue\' failed. ")
 
-    def issueSetValue(self, ROBEntryNumber, RSEntryName):
+    def issueSetValue(self, ROBEntryNumber, RSEntryName):  #ROB利用RS表项，提前提前提前计算出value的表达式
         ROBEntry = REORDER_BUFFER.getROBEntry(ROBEntryNumber)
         RSEntry = RESERVATION_STATIONS.getRSEntry(RSEntryName)
         outcome = RSEntry.getROBValue()
         ROBEntry.value = outcome
 
-    def exec(self, instructionInfo): #检查ready，为真则将指令状态置为Exec，设置计时器
+    def exec(self, instruction, instructionInfo): #为单条指令检查ready，为真则将指令状态置为Exec，设置计时器
         RSEntry = RESERVATION_STATIONS.getRSEntry(instructionInfo['RSEntry'])
         ROBEntry = REORDER_BUFFER.getROBEntry(instructionInfo['ROBEntry'])
         op = RSEntry.operation
-        if RSEntry.ready:
+        if RSEntry.ready:  #检查ready，为真则将指令状态置为Exec，设置计时器，更新CycleTable
             ROBEntry.state = 'Exec'
-            RSEntry.timer = EXEC_SPEND_CYCLE[op]
+            RSEntry.timer = EXEC_SPEND_CYCLE[op]-1
+            self.RunningCycle.setExec(instruction, self.cycle)
 
 
-    def write(self,instruction, instructionInfo):
+    def write(self,  instruction, instructionInfo):
         #若执行计数器未执行完，更新计数器，保持state=Exec
-        RSEntry = RESERVATION_STATIONS.getRSEntry(instructionInfo[instruction]['Name'])
-        if RSEntry.timer != 0:
+        RSEntry = RESERVATION_STATIONS.getRSEntry(instructionInfo['RSEntry'])
+        if RSEntry.timer >= 0:
             RSEntry.timer -= 1
         # 否则清除RS、修改ROB状态、执行旁路
         else:
+            op = RSEntry.operation
             RSEntry.clear()
-            op = instruction.split()[0]
-            ROBEntryNumber = instructionInfo[instruction]['ROBEntryNumber']
+            ROBEntryNumber = instructionInfo['ROBEntry']
             ROBEntry = REORDER_BUFFER.getROBEntry(ROBEntryNumber)
             if op == 'SD':
-                a=1#bubble
+                a=1 #bubble
             else:
                 ROBEntry.state = 'Write' #修改ROB状态
+                self.RunningCycle.setWrite(instruction, self.cycle) #更新CycleTable
                 #旁路：从ROBEntry.value旁路到RS.v==None的项：遍历RS，找到RS.v==None的RSEntry，根据RS.q找到目标ROBEntry.value
                 RESERVATION_STATIONS.forwarding(ROBEntryNumber, ROBEntry.value)
 
@@ -94,9 +120,10 @@ class SpeculativeTomasulo:
         op = instruction.split()[0]
         destination = instruction.split()[1]
         if op == 'SD':  #将执行结果写入Memory（do nothing）
-            REORDER_BUFFER.commit(instructionInfo[instruction]['ROBEntry']) #清除ROB（修改state、busy）
-        else: #普通指令
-            if REORDER_BUFFER.commit(instructionInfo[instruction]['ROBEntry']): #清除ROB（修改state、busy）
+            REORDER_BUFFER.commit(instructionInfo['ROBEntry']) #清除ROB（修改state、busy）
+        else: #普通指令。清除ROB（修改state、busy）
+            if REORDER_BUFFER.commit(instructionInfo['ROBEntry']): # 检查是否为最旧的指令
+                self.RunningCycle.setCommit(instruction, self.cycle)
                 REGISTER_RESULT_STATUS.unmap(destination)  #将执行结果写入寄存器(清除RRS)
 
     def init(self, file_path):
@@ -108,15 +135,14 @@ class SpeculativeTomasulo:
     #每个周期执行四个操作
     def run(self, file_path):
         self.init(file_path)
-        cycle = 0
-        limit = 10
-        while limit > 0 :
-            self.display(cycle)
-            cycle += 1
-            limit -= 1
+        self.cycle = 0
+        while True:
+            self.display(self.cycle)
+            self.cycle += 1
             #对每条指令状态进行判断顺序:提交->写回->执行。RAW只会影响更新的指令，因此从旧往新更新即可。
             for i, (instruction, instructionInfo) in enumerate(self.RunningCycle.instructionInfo.items()):
-                state = self.RunningCycle.instructionInfo[instruction]['State']
+                ROBEntryNumber = self.RunningCycle.instructionInfo[instruction]['ROBEntry']
+                state = REORDER_BUFFER.getROBEntry(ROBEntryNumber).state
                 if state == 'Commit':
                     continue  #提交的指令已经完成
                 elif state == 'Write':
@@ -124,21 +150,16 @@ class SpeculativeTomasulo:
                 elif state == 'Exec':
                     self.write(instruction, instructionInfo) #可能是对指令Timer--,也可能是将指令write，旁路，更新依赖项ready
                 elif state == 'Issue':
-                    self.exec(instructionInfo) #检查ready，为真则将指令状态置为Exec，设置计时器
+                    self.exec(instruction, instructionInfo) #检查ready，为真则将指令状态置为Exec，设置计时器
             self.issue() #这是每个周期都要做的事情
-
-            # self.exec()  #这是部分指令要做的事情.考虑exec与write/commit的顺序关系.计时器的加减规则
-            # self.write() #这是部分指令要做的事情
-            # self.commit()#这是部分指令要做的事情
-
             #终止判断
             if (FQ_OP_QUEUE.isempty()
                     and REORDER_BUFFER.isempty()
                     and RESERVATION_STATIONS.isempty()
                     and REGISTER_RESULT_STATUS.isempty()):
                 break
-
         #打印最后的 RunningCycle 表
+        self.RunningCycle.display()
 
     def display(self, cycle):
         print("===================================================================================================")

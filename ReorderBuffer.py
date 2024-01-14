@@ -25,12 +25,12 @@ class ReorderBufferEntry:
         self.value = None #会在main.issue更新
 
     def display(self):
-        print(fmc(self.number,5)+'  '
-                , ('Yes' if self.busy else 'No')
-                , fml(self.instruction,15) + ' '
+        print(fmc(self.number,5)+' '
+                , (' Yes' if self.busy else ' No ') +' '
+                , fml(self.instruction,14) + ' '
                 , fml(self.state, 7)
                 , fmc(self.destination, 4) +' '
-                , self.value)
+                , (self.value if self.state=='Commit' else ''))
 
 
 
@@ -100,7 +100,7 @@ class ReorderBuffer:
         while size != 0: #向上搜索仍未提交的指令
             if self.queue[checkPointer].destination == keyReg:  #某条目的指令满足 Dest==KeyReg 说明冲突
                 state = self.queue[checkPointer].state
-                if state=='Ex' or state=='Issue':   #该条目状态为Ex或Issue，需要等待结果
+                if state=='Exec' or state=='Issue':   #该条目状态为Exec或Issue，需要等待结果
                     return None, checkPointer+1   #返回冲突的ROB条目序号
                 elif state=='write':    #该条目的状态为write，可以旁路
                     return self.queue[checkPointer].value, checkPointer+1 #旁路返回ROBEntry的value值（value值的表示工作交给写入时进行）
