@@ -14,15 +14,15 @@ class ReorderBufferEntry:
         self.state = state  # 结果是否就绪
         self.destination = destination  # 目标寄存器
         self.value = value  # 计算结果或加载的值
-        self.ready = ready  # 结果是否就绪
 
     def issue(self, instruction):
         #新的指令进来了，彻底刷新ROB表项
         self.busy = True
         self.instruction = instruction
         self.state = 'Issue'
-        self.destination = instruction.split()[1]
-        self.value = None #会在main.issue更新
+        op = instruction.split()[0]  # 只有 SD 指令不写寄存器
+        self.destination = instruction.split()[1] if op != 'SD' else None
+        self.value = None  #会在main.issue更新
 
     def display(self):
         print(fmc(self.number,5)+' '
@@ -30,7 +30,7 @@ class ReorderBufferEntry:
                 , fml(self.instruction,14) + ' '
                 , fml(self.state, 7)
                 , fmc(self.destination, 4) +' '
-                , (self.value if self.state=='Commit' else ''))
+                , (self.value if self.state=='Commit'or self.state=='Write' else ''))
 
 
 
@@ -45,11 +45,12 @@ class ReorderBuffer:
         for i in range(self.maxlen):
             self.queue.append(ReorderBufferEntry(i+1)) #number是ROBEntry的唯一标识
 
-    def issue(self, instruction): #行为是add（接收），实现是push（插入队列）
+    def issue(self, instruction): #实现是push（插入队列）
         if self.isfull():
-            print("ROBQueue is full, and function \'push\' is failed: ")
-            print(instruction)
+            print(f"ROBQueue is full, and function \'issue {instruction}\' is failed: ")
             return
+        if instruction == 'MULTD F6 F0 F2':
+            print('why')
         number = self.tear + 1 #获取ROB表项序号（逻辑序号，比真实序号大一）
         self.queue[self.tear].issue(instruction) # 更新ROB项
         self.size += 1
@@ -60,10 +61,10 @@ class ReorderBuffer:
         ROBEntry = self.queue[self.head]
         if ((ROBEntryNumber-1+self.maxlen)%self.maxlen == self.head
                 and ROBEntry.busy and ROBEntry.state=='Write'):
-            ROBEntry.state='Commit'
             ROBEntry.busy=False
             self.pop()
             return True
+        return False
 
     def pop(self):
         if self.isempty():

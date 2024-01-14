@@ -25,7 +25,9 @@ class ReservationStationsEntry:
         return self.busy
 
     def updateReady(self):
-        self.ready = self.value1 is not None and self.value2 is not None or self.address is not None
+        self.ready = (self.value1 is not None and self.value2 is not None
+                      or self.address is not None and self.operation=='LD'
+                      or self.value1 is not None and self.operation=='SD')
 
     def clear(self):
         self.timer = -1
@@ -49,7 +51,7 @@ class ReservationStationsEntry:
                   ,(fml(self.value2, 10) if self.value2 is not None else '          ')+ ' '
                   ,('  ' if self.source1 is None or self.value1 is not None else f'#{self.source1}' if isinstance(self.source1, int) else self.source1)+ ' '
                   ,('  ' if self.source2 is None or self.value2 is not None else f'#{self.source2}' if isinstance(self.source2, int) else self.source2)+ ' '
-                  ,f' #{self.destination} '+ ' '
+                  ,(fmc(f'#{self.destination}', 4) if self.destination is not None else '    ')+ ' '
                   ,self.address)
         else:
             print('      '+ fml(self.name, 5)+'  '+' No ')
@@ -75,16 +77,15 @@ class ReservationStationsEntry:
             imm = instruction.split()[2]
             AddrReg = instruction.split()[3]
             self.address = f'{imm}+Regs[{AddrReg}]'
-            if op == 'LD':  #如果是LD，则设置Dest。
+            if op == 'LD':  #如果是LD，则设置Dest。不会有 RAW 冲突
                 self.destination = ROBEntryNumber
                 self.value1 = None
                 self.source1 = None
                 self.value2 = None
                 self.source2 = None
-            elif op=='SD':  #如果是SD，则设置SrcReg
+            elif op=='SD':  #如果是SD，则设置SrcReg。检查 RAW 冲突
                 self.destination = None
-                self.value1 = None
-                self.source1 = ValReg
+                self.value1, self.source1 = REORDER_BUFFER.checkRAW(ROBEntryNumber, ValReg)  # 检查ROB中对应条目的过去条目的 Dest 是否与该条目的 src 冲
                 self.value2 = None
                 self.source2 = None
         self.updateReady()
@@ -105,6 +106,8 @@ class ReservationStationsEntry:
         else:
             if op == 'LD':
                 return f'Mem[{self.name}]'
+            else:  # SD 的 value 即为 读寄存器值
+                return
 
 class Station:
     def __init__(self, maxlen, name):

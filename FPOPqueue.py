@@ -3,13 +3,15 @@ from queue import Queue
 class FPOPqueue:
     def __init__(self):
         self.queue = Queue()
+        self.size = 0
 
     def push(self, instruction):
         self.queue.put(instruction)
 
     def pop(self):
-        instruction = self.queue.get()
-        return instruction
+        self.queue.get()
+        self.size += 1
+        return self.size-1
 
     def isempty(self):
         return self.queue.empty()
