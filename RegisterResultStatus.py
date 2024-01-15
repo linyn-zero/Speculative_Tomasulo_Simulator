@@ -56,15 +56,4 @@ class RegisterResultStatus:
 MAX_SIZE = 6
 REGISTER_RESULT_STATUS = RegisterResultStatus()
 
-#检查RRS映射逻辑
-# rrs = RegisterResultStatus()
-# rrs.display()
-# rrs.map("F4", 5)
-# rrs.display()
-# rrs.map("F2", 3)
-# rrs.display()
-# rrs.map("F6", 2)
-# rrs.display()
-# rrs.unmap("F2")
-# rrs.display()
 

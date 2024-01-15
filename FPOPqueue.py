@@ -45,27 +45,3 @@ class FPOPqueue:
 FQ_OP_QUEUE = FPOPqueue()
 
 
-
-#读文件检查
-# fq = FPOPqueue()
-# fq.input('./input1.txt')
-# fq.display()
-
-#逻辑检查
-# fq = FPOPqueue()
-# fq.push("ADD F2 F3 F3")
-# fq.display()
-# fq.push("MULT F2 F3 F3")
-# fq.display()
-# fq.push("LD F2 F3 F3")
-# fq.display()
-# fq.push("SD F2 F3 F3")
-# fq.display()
-# print("头元素", fq.queue.queue[0])
-# fq.display()
-# print(fq.pop())
-# fq.display()
-# print(fq.pop())
-# fq.display()
-# print(fq.pop())
-# fq.display()
