@@ -10,7 +10,6 @@ def fml(s, width):
     return ' ' * width if s is None else\
         '{0:<{width}}'.format(str(s), width=width)
 
-INPUT_FILE_PATH = './input2.txt'
 OUTPUT_FILE_PATH = './output2.txt'
 STD_OP = ['ADDD', 'SUBD', 'MULTD', 'DIVD', 'LD', 'SD']
 EXEC_SPEND_CYCLE = {
@@ -172,10 +171,8 @@ class SpeculativeTomasulo:
         self.init(file_path)
         self.cycle = 0
         while True:
-            self.display(self.cycle)
-            if self.cycle==26:
-                print()
             self.cycle += 1
+            self.display(self.cycle)
             #对每条指令状态进行判断顺序:提交->写回->执行。RAW只会影响更新的指令，因此从旧往新更新即可。
             for i, (instructionNumber, instructionInfo) in enumerate(self.RunningCycle.instructionInfo.items()):
                 state = instructionInfo['State']
@@ -221,6 +218,9 @@ class SpeculativeTomasulo:
         RESERVATION_STATIONS.display()
         REGISTER_RESULT_STATUS.display()
         print("===================================================================================================")
+
+
+INPUT_FILE_PATH = './input2.txt'
 
 if __name__ == "__main__":
     speculative_tomasulo = SpeculativeTomasulo()
